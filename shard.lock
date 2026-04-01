@@ -1,9 +1,5 @@
 version: 2.0
 shards:
-  cr6502:
-    path: ../../
-    version: 0.1.0
-
   cry-bus:
     git: https://github.com/d-shwagginz/cry-bus.git
     version: 0.1.0+git.commit.d8133067b7fa9e2334376ab591e0da874346e257

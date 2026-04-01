@@ -11,6 +11,9 @@ targets:
 dependencies:
   cr6502:
     path: ../../
+  cry-bus:
+    github: D-Shwagginz/cry-bus
+
 
 crystal: '>= 1.12.1'
 

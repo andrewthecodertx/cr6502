@@ -1,5 +1,8 @@
 # ## The 6502 CPU
 #
+# NOTE: THESE EXAMPLES ASSUME A MEMORY BUS AND ARE NO LONGER VALID.
+# PLEASE VIEW THE MULTIPLICATION EXAMPLE TO SHOW HOW TO CREATE A SYSTEM BUS
+#
 # ### Assembly:
 # The main powerhouse of the emulator is the `CPU#load_asm()` method.
 #
@@ -29,8 +32,8 @@
 # ```
 #
 # The assembler also has some predefined labels:<br>
-# `resvec:` will set the value at `RES_LOCATION` to the label's memory location.<br>
-# `brkvec:` will set the value at `BRK_LOCATION` to the label's memory location.<br>
+# `resvec:` will set the value at `RES_LOCATION` to the label's address location.<br>
+# `brkvec:` will set the value at `BRK_LOCATION` to the label's address location.<br>
 #
 # Example:
 # ```
@@ -184,8 +187,7 @@ class CPU
     Carry
   end
 
-  # The 64kb (65536 bytes) of accessible memory
-  getter memory : IO::Memory = IO::Memory.new(65536)
+
   # The 8-bit accumulator. Used in arithmetic operations
   getter accumulator : UInt8 = 0
   # The 8-bit x index register
@@ -196,7 +198,7 @@ class CPU
   #
   # The stack ranges from 0x100 to 0x1FF, starting at 0x1FF
   getter stack_pointer : UInt8 = 255
-  # The 16-bit program counter which points to the next instruction in memory to execute.
+  # The 16-bit program counter which points to the next instruction in the data bus to execute.
   #
   # Gets set after a command is read, but before it is executed.
   #
@@ -235,7 +237,6 @@ class CPU
 
     poke(RES_LOCATION, reset)
     poke(BRK_LOCATION, brk)
-
     @program_counter = peek(RES_LOCATION, true).to_u16
   end
 
@@ -267,9 +268,8 @@ class CPU
   def execute(end_on_tight_loop : Bool = true, reset : Bool = true)
     @stop_exec = false
 
-    @memory.pos = 0xfffc
     if reset
-      @program_counter = @memory.read_bytes(UInt16, IO::ByteFormat::LittleEndian)
+      @program_counter = peek(0xfffc, true).to_u16
     else
       @previous_program_counter = -1
     end
@@ -299,16 +299,13 @@ class CPU
     return "#{tens}#{ones}".to_u8
   end
 
-  # Pokes a value into a location in memory
-  def poke(mem_location : Int, data : UInt8 | UInt16)
-    @memory.pos = mem_location
-    @memory.write_bytes(data, IO::ByteFormat::LittleEndian)
+  # Pokes a value into the data bus
+  def poke(mem_location : UInt32 | Int32 | UInt16 | UInt8, data : UInt8 | UInt16)
   end
 
-  # Reads a value from memory. Will read as a `UInt16` if `two_byte` is `true`
-  def peek(mem_location : Int, two_byte : Bool = false)
-    @memory.pos = mem_location
-    return two_byte ? @memory.read_bytes(UInt16, IO::ByteFormat::LittleEndian) : @memory.read_bytes(UInt8, IO::ByteFormat::LittleEndian)
+  # Reads a value from the data bus
+  def peek(mem_location : UInt32 | Int32 | UInt16 | UInt8, two_byte : Bool = false) : UInt8 | UInt16
+    return 0_u8
   end
 
   # Gets a the value of a bit in `flags`
@@ -368,24 +365,6 @@ class CPU
         @flags = @flags & 0b11111101
       when Flags::Carry
         @flags = @flags & 0b11111110
-      end
-    end
-  end
-
-  # Prints out the current memory.
-  #
-  # Prints out 16 bytes per line. Therefore `print_memory(0x0F4, 1)` will print `0x0F40` through `0x0F4F`
-  def print_memory(start_pos : Int = 0, length : Int = 65536)
-    if start_pos > 65535
-      raise Exception.new("'start_pos' is greater than 65535 which is the maximum amount of memory")
-    elsif start_pos + length > 65536
-      raise Exception.new("'length' goes past end of memory. 'start_pos' + 'length' = #{start_pos + length} which is greater than 65536")
-    else
-      @memory.pos = 0
-      slice = Bytes.new(65536)
-      @memory.read(slice)
-      slice.hexdump[start_pos + start_pos*76, length*76].each_line do |line|
-        puts line[4..-1]
       end
     end
   end
